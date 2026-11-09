@@ -2,7 +2,7 @@
 
 A Qiskit Fall Fest 2026 hackathon project exploring whether a quantum kernel SVM can classify
 acute leukemia subtype (ALL vs AML) from gene-expression microarray data, using the
-[Golub et al. (1999)](https://www.science.org/doi/10.1126/science.286.5439.531) dataset.
+[Golub et al. (1999)](https://www.kaggle.com/datasets/crawford/gene-expression/data?select=data_set_ALL_AML_independent.csv) dataset.
 
 The project implements a full ML pipeline — data loading, fold-safe gene selection,
 classical baselines, a quantum kernel SVM, and diagnostic visualisations — and
@@ -279,7 +279,7 @@ while the quantum model is currently constrained to k=8 qubits for exact simulat
 ## How the Quantum Kernel Works
 
 The quantum kernel follows the method from the
-[IBM "Quantum kernel methods" tutorial](https://learning.quantum.ibm.com/tutorial/quantum-kernel-machine-learning).
+[IBM "Quantum kernel methods" tutorial](https://quantum.cloud.ibm.com/learning/en/courses/quantum-machine-learning/quantum-kernel-methods).
 
 **Feature encoding**: Each patient's k selected genes (after MinMaxScaler × scale) are
 encoded as rotation angles in a **ZZFeatureMap** circuit with `reps=1` and linear
