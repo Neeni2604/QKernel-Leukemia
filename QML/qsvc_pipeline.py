@@ -91,10 +91,8 @@ class QuantumKernelPipeline(BaseEstimator, ClassifierMixin):
     """Fold-safe: Welch selection -> scaling -> quantum kernel -> SVC(precomputed)."""
 
     def __init__(self, k=8, feature_map="zz", reps=1, C=1.0, scaler="minmax",
-                 scale=1.0, kernel="exact", shots=1024, seed=0, verbose=False,
-                 class_weight=None):
+                 scale=1.0, kernel="exact", shots=1024, seed=0, verbose=False):
         self.verbose = verbose
-        self.class_weight = class_weight
         self.k = k
         self.feature_map = feature_map
         self.reps = reps
@@ -152,9 +150,7 @@ class QuantumKernelPipeline(BaseEstimator, ClassifierMixin):
         if self.verbose:
             log(f"done | training kernel {len(X)}x{len(X)}... ", end="")
         K_train = self._kernel(self.X_train_)
-        self.svc_ = SVC(
-            kernel="precomputed", C=self.C, class_weight=self.class_weight
-        ).fit(K_train, y)
+        self.svc_ = SVC(kernel="precomputed", C=self.C).fit(K_train, y)
         self.classes_ = self.svc_.classes_
         if self.verbose:
             log(f"done, SVC fitted ({time.perf_counter() - t0:.1f}s)")
@@ -205,10 +201,7 @@ def _main() -> None:
     ap.add_argument("--scaler", choices=["minmax", "standard"], default="minmax")
     ap.add_argument("--feature-map", choices=["zz", "z"], default="zz")
     ap.add_argument("--reps", type=int, default=1)
-    ap.add_argument("--Cs", "--C", dest="Cs", type=float, nargs="+", default=[1.0],
-                    help="SVC regularisation C; several values sweep (bigger = fits training data harder)")
-    ap.add_argument("--class-weight", choices=["none", "balanced"], default="none",
-                    help="'balanced' stops the SVM from favouring the majority class (ALL)")
+    ap.add_argument("--C", type=float, default=1.0)
     ap.add_argument("--kernel", choices=["exact", "sampler"], default="exact")
     ap.add_argument("--shots", type=int, default=1024, help="Shots per circuit (sampler kernel)")
     ap.add_argument("--folds", type=int, default=5)
@@ -228,38 +221,35 @@ def _main() -> None:
         f"clipped + log2 transformed (ALL={int((y == 0).sum())}, AML={int((y == 1).sum())})")
 
     log(f"[2/4] Setup: {args.folds}-fold x {args.repeats} repeated CV; "
-        f"{args.feature_map.upper()} map reps={args.reps}, scaler={args.scaler}, "
-        f"class_weight={args.class_weight}, kernel={args.kernel}" + (f" ({args.shots} shots)" if args.kernel == "sampler" else ""))
+        f"{args.feature_map.upper()} map reps={args.reps}, scaler={args.scaler}, C={args.C}, "
+        f"kernel={args.kernel}" + (f" ({args.shots} shots)" if args.kernel == "sampler" else ""))
 
     sweep = HERE.parent / "baselines" / "results" / "k_sweep.csv"
     classical = pd.read_csv(sweep) if sweep.exists() else None
     log("      classical k_sweep.csv " + ("found: will print best classical per k" if classical is not None
                                          else "not found: skipping classical comparison"))
 
-    configs = list(itertools.product(args.ks, args.scales, args.Cs))
-    class_weight = None if args.class_weight == "none" else "balanced"
+    configs = list(itertools.product(args.ks, args.scales))
     total_folds = args.folds * args.repeats
     log(f"[3/4] Running {len(configs)} config(s) x {total_folds} folds ...")
 
     rows = []
-    for i, (k, scale, C) in enumerate(configs, start=1):
-        log(f"  config {i}/{len(configs)}: k={k} genes/qubits, scale={scale}, C={C}")
+    for i, (k, scale) in enumerate(configs, start=1):
+        log(f"  config {i}/{len(configs)}: k={k} genes/qubits, scale={scale}")
         _PROGRESS["fold"], _PROGRESS["total"] = 0, total_folds
         t_cfg = time.perf_counter()
         model = QuantumKernelPipeline(
-            k=k, feature_map=args.feature_map, reps=args.reps, C=C,
+            k=k, feature_map=args.feature_map, reps=args.reps, C=args.C,
             scaler=args.scaler, scale=scale, kernel=args.kernel,
             shots=args.shots, seed=args.seed, verbose=not args.quiet,
-            class_weight=class_weight,
         )
         r = evaluate(X, y, model, args.folds, args.repeats, args.seed)
         rows.append({
             "model": f"qsvc_{args.feature_map}_{args.kernel}", "k_genes": k,
-            "scaler": args.scaler, "scale": scale, "reps": args.reps, "C": C,
-            "class_weight": args.class_weight,
+            "scaler": args.scaler, "scale": scale, "reps": args.reps, "C": args.C,
             "shots": args.shots if args.kernel == "sampler" else 0, **r,
         })
-        line = (f"  -> k={k:<3d} scale={scale:<7.3f} C={C:<6g} acc {r['accuracy_mean']:.3f} +/- "
+        line = (f"  -> k={k:<3d} scale={scale:<7.3f} acc {r['accuracy_mean']:.3f} +/- "
                 f"{r['accuracy_std']:.3f}  auroc {r['auroc_mean']:.3f}  "
                 f"sens {r['sensitivity_mean']:.3f}  spec {r['specificity_mean']:.3f}  "
                 f"({time.perf_counter() - t_cfg:.1f}s)")
