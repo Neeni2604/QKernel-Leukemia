@@ -1,0 +1,7 @@
+kernel,scale,group,mean,std,n_pairs
+zz,0.1,within_all,0.909463,0.078516,1081
+zz,0.1,within_aml,0.860384,0.128865,300
+zz,0.1,between,0.461741,0.176564,1175
+zz,1.0,within_all,0.037012,0.094914,1081
+zz,1.0,within_aml,0.063292,0.137439,300
+zz,1.0,between,0.004713,0.008801,1175

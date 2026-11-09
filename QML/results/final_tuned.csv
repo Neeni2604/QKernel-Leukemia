@@ -1,0 +1,2 @@
+model,k_genes,scaler,scale,reps,C,class_weight,shots,accuracy_mean,accuracy_std,auroc_mean,auroc_std,sensitivity_mean,sensitivity_std,specificity_mean,specificity_std
+qsvc_zz_exact,8,minmax,0.1,1,1.0,none,0,0.9443809523809524,0.05539747122923667,0.9932444444444445,0.014435621236851142,0.912,0.11426285485668558,0.9608888888888889,0.06094887556057754
